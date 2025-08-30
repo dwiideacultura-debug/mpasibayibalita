@@ -24,8 +24,8 @@
     .hint{font-size:12px;color:var(--muted)}
     @media (max-width:640px){#book{height:72vh;border-radius:14px}.nav{padding:8px 10px}}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.54/legacy/build/pdf.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -56,8 +56,8 @@ window.addEventListener('load', async () => {
   const PDF_URL = params.get('file') || "pdf/mpasi.pdf";
   try {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.54/legacy/build/pdf.worker.min.js";
-
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+    
     const loadingEl = document.getElementById('loading');
     const barEl = document.getElementById('bar');
     const hintEl = document.getElementById('hint');
