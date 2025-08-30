@@ -129,6 +129,14 @@
     }
 
     .is-fullscreen #book{ height: 92dvh; }
+/* Smooth page transform while flipping */
+.page {
+  backface-visibility: hidden;
+  will-change: transform;
+  transition: transform 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+    
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" defer></script>
@@ -329,7 +337,19 @@ window.addEventListener('load', async () => {
   }
 
   function initFlip(){
-    const sz = computeSize();
+  pageFlip = new St.PageFlip(bookEl, {
+  width: Math.floor(sz.width / (sz.usePortrait ? 1 : 2)),
+  height: Math.floor(sz.height),
+  size: "stretch",
+  showCover: true,
+  drawShadow: true,
+  maxShadowOpacity: 0.25,
+  flippingTime: 720,            // ← ANGKA INI KITA UBAH
+  usePortrait: sz.usePortrait,
+  mobileScrollSupport: true,
+  minWidth: 320, maxWidth: 3600, minHeight: 320, maxHeight: 5000,
+});
+  const sz = computeSize();
     setSkeletonSize(Math.floor(sz.width / (sz.usePortrait ? 1 : 2)), Math.floor(sz.height)); // size per-page
     pageFlip = new St.PageFlip(bookEl, {
       width: Math.floor(sz.width / (sz.usePortrait ? 1 : 2)), // per page
@@ -338,7 +358,7 @@ window.addEventListener('load', async () => {
       showCover: true,
       drawShadow: true,
       maxShadowOpacity: 0.25,
-      flippingTime: 720,
+      flippingTime: 1000,
       usePortrait: sz.usePortrait,
       mobileScrollSupport: true,
       minWidth: 320, maxWidth: 3600, minHeight: 320, maxHeight: 5000,
@@ -414,7 +434,9 @@ window.addEventListener('load', async () => {
     if (pageNumber < 1 || pageNumber > pageCount) return;
     const canvas = canvases[index]; if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: false });
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
     const page = await pdf.getPage(pageNumber);
 
     // Hitung skala dari ukuran pageFlip saat ini (per halaman)
@@ -432,11 +454,13 @@ window.addEventListener('load', async () => {
 
   let renderQueued=false;
   async function renderVisible(){
-    const i = pageFlip.getCurrentPageIndex();
-    const visible = new Set([i, i+1, i-1].filter(n => n>=0 && n<pageCount));
-    const m = zoomWrap.style.transform.match(/scale\(([^)]+)\)/);
-    const currentZoom = parseFloat(m ? m[1] : '1') || 1;
-    await Promise.all(Array.from(visible).map(idx => renderPage(idx, currentZoom)));
+  const i = pageFlip.getCurrentPageIndex();
+  const visible = new Set([i-2, i-1, i, i+1, i+2].filter(n => n>=0 && n<pageCount));
+  const m = zoomWrap.style.transform.match(/scale\(([^)]+)\)/);
+  const currentZoom = parseFloat(m ? m[1] : '1') || 1;
+  await Promise.all(Array.from(visible).map(idx => renderPage(idx, currentZoom)));
+}
+
   }
   function requestRenderVisible(){
     if(renderQueued) return; renderQueued=true;
