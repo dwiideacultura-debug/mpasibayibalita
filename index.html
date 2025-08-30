@@ -232,7 +232,7 @@ window.addEventListener('load', async () => {
     const pdf = await task.promise;
     const pageCount = pdf.numPages;
 
-    const scale = Math.min(2.2, (window.devicePixelRatio || 1) * 1.6);
+const scale = Math.min(3.0, (window.devicePixelRatio || 1) * 2.25);
     const images = [];
     let baseWidth = 800, baseHeight = 1120;
 
@@ -241,7 +241,7 @@ window.addEventListener('load', async () => {
       const page = await pdf.getPage(i);
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { alpha: false });
+      const ctx = ctx.imageSmoothingEnabled = false;
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: ctx, viewport }).promise;
