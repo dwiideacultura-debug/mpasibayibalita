@@ -24,8 +24,12 @@
     .hint{font-size:12px;color:var(--muted)}
     @media (max-width:640px){#book{height:72vh;border-radius:14px}.nav{padding:8px 10px}}
   </style>
-<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+
+  <!-- 1) Flip animation (boleh defer) -->
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" defer></script>
+
+  <!-- 2) PDF.js WAJIB TANPA 'defer' supaya 'pdfjsLib' langsung ada -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -51,13 +55,15 @@
 
 <script>
 window.addEventListener('load', async () => {
+  // PDF default: pdf/mpasi.pdf  |  Bisa override: ?file=pdf/namamu.pdf
   const params = new URLSearchParams(location.search);
-  // Allow override via ?file=pdf/xyz.pdf
   const PDF_URL = params.get('file') || "pdf/mpasi.pdf";
+
   try {
+    // Worker PDF.js – versi HARUS sama dengan yang di atas
     pdfjsLib.GlobalWorkerOptions.workerSrc =
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
-    
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+
     const loadingEl = document.getElementById('loading');
     const barEl = document.getElementById('bar');
     const hintEl = document.getElementById('hint');
@@ -66,12 +72,13 @@ window.addEventListener('load', async () => {
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    // Quick probe: show direct link to the PDF for debugging
+    // Info path PDF (buat debug)
     const probe = document.createElement('div');
     probe.className = 'hint';
     probe.innerHTML = 'PDF path: <code>'+PDF_URL+'</code>';
     loadingEl.appendChild(probe);
 
+    // Load PDF
     const task = pdfjsLib.getDocument(PDF_URL);
     const pdf = await task.promise;
     const pageCount = pdf.numPages;
@@ -89,8 +96,10 @@ window.addEventListener('load', async () => {
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: ctx, viewport }).promise;
+
       if (i === 1) { baseWidth = canvas.width; baseHeight = canvas.height; }
       images.push(canvas.toDataURL('image/jpeg', 0.92));
+
       barEl.style.width = ((i / pageCount) * 100).toFixed(1) + "%";
       await new Promise(r => setTimeout(r, 12));
     }
@@ -109,6 +118,7 @@ window.addEventListener('load', async () => {
     pageFlip.on('flip', updateCounter);
     pageFlip.on('init', updateCounter);
     pageFlip.on('update', updateCounter);
+
     prevBtn.addEventListener('click', () => pageFlip.flipPrev());
     nextBtn.addEventListener('click', () => pageFlip.flipNext());
     document.addEventListener('keydown', (e) => {
@@ -121,7 +131,8 @@ window.addEventListener('load', async () => {
   } catch (err) {
     console.error(err);
     const bookEl = document.getElementById('book');
-    bookEl.innerHTML = "<div style='padding:24px; color:#b91c1c'>Failed to load flipbook.<br/>" +
+    bookEl.innerHTML =
+      "<div style='padding:24px; color:#b91c1c'>Failed to load flipbook.<br/>" +
       "Check that your PDF exists at <code>" + (new URL(PDF_URL, location.href)).href + "</code>.<br/>" +
       "Error: <code>" + (err && (err.message || err.toString())) + "</code></div>";
   }
