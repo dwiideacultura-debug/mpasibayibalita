@@ -25,11 +25,21 @@
     @media (max-width:640px){#book{height:72vh;border-radius:14px}.nav{padding:8px 10px}}
   </style>
 
-  <!-- 1) Flip animation (boleh defer) -->
+  <!-- Flip animation -->
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" defer></script>
 
-  <!-- 2) PDF.js WAJIB TANPA 'defer' supaya 'pdfjsLib' langsung ada -->
+  <!-- PDF.js primary CDN (tanpa defer) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+  <!-- Fallback otomatis kalau pdfjsLib belum ada -->
+  <script>
+    (function(){
+      if (!window.pdfjsLib) {
+        var s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+        document.head.appendChild(s);
+      }
+    })();
+  </script>
 </head>
 <body>
   <div class="app">
@@ -54,15 +64,38 @@
   </div>
 
 <script>
+async function waitForPdfjs(){
+  for (let i=0;i<30;i++){ // ~3 detik
+    if (window.pdfjsLib) return window.pdfjsLib;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  throw new Error('PDF.js failed to load');
+}
+
 window.addEventListener('load', async () => {
   // PDF default: pdf/mpasi.pdf  |  Bisa override: ?file=pdf/namamu.pdf
   const params = new URLSearchParams(location.search);
   const PDF_URL = params.get('file') || "pdf/mpasi.pdf";
 
+  let pdfjs;
   try {
-    // Worker PDF.js – versi HARUS sama dengan yang di atas
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+    pdfjs = await waitForPdfjs();
+  } catch (e) {
+    const bookEl = document.getElementById('book');
+    bookEl.innerHTML = "<div style='padding:24px; color:#b91c1c'>Failed to load PDF.js library.</div>";
+    return;
+  }
+
+  try {
+    // Worker di-set sesuai versi yang berhasil ke-load
+    const v = pdfjs.version || '';
+    if (v.startsWith('4.')) {
+      pdfjs.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+    } else {
+      pdfjs.GlobalWorkerOptions.workerSrc =
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    }
 
     const loadingEl = document.getElementById('loading');
     const barEl = document.getElementById('bar');
@@ -72,14 +105,14 @@ window.addEventListener('load', async () => {
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    // Info path PDF (buat debug)
+    // Info path PDF (debug)
     const probe = document.createElement('div');
     probe.className = 'hint';
     probe.innerHTML = 'PDF path: <code>'+PDF_URL+'</code>';
     loadingEl.appendChild(probe);
 
     // Load PDF
-    const task = pdfjsLib.getDocument(PDF_URL);
+    const task = pdfjs.getDocument(PDF_URL);
     const pdf = await task.promise;
     const pageCount = pdf.numPages;
 
@@ -104,11 +137,21 @@ window.addEventListener('load', async () => {
       await new Promise(r => setTimeout(r, 12));
     }
 
+    // --- Flipbook: mode 2 halaman (spread) ---
     const pageFlip = new St.PageFlip(bookEl, {
-      width: baseWidth, height: baseHeight, size: "stretch",
-      minWidth: 320, maxWidth: 2400, minHeight: 320, maxHeight: 4000,
-      showCover: true, drawShadow: true, maxShadowOpacity: 0.2,
-      flippingTime: 750, usePortrait: true, mobileScrollSupport: true,
+      width: baseWidth,
+      height: baseHeight,
+      size: "stretch",
+      minWidth: 320,
+      maxWidth: 2400,
+      minHeight: 320,
+      maxHeight: 4000,
+      showCover: true,      // Halaman 1 tampil sendiri sebagai cover
+      drawShadow: true,
+      maxShadowOpacity: 0.2,
+      flippingTime: 750,
+      usePortrait: false,   // <-- Spread 2 halaman (majalah)
+      mobileScrollSupport: true,
     });
     pageFlip.loadFromImages(images);
 
